@@ -80,6 +80,20 @@
             color: var(--accent);
             background: rgba(255,106,61,0.10);
         }
+        .topnav .login-btn {
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            padding: 5px 14px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 14px;
+            margin-left: 12px;
+        }
+        .topnav .login-btn:hover {
+            background: rgba(255,106,61,0.10);
+            text-decoration: none;
+        }
+        .topnav { visibility: hidden; }
         @media (max-width: 600px) {
             .topnav { padding: 12px 16px; gap: 12px; }
             .topnav .brand-link span:not(.topnav-logo) { display: none; }
@@ -87,23 +101,143 @@
         }
 
         .wrap {
-            max-width: 760px;
+            max-width: 1100px;
             margin: 0 auto;
-            padding: 64px 24px;
+            padding: 48px 24px;
         }
 
         h1 {
-            font-size: clamp(32px, 5vw, 48px);
+            font-size: clamp(28px, 4vw, 38px);
             line-height: 1.15;
             letter-spacing: -0.02em;
-            margin: 0 0 20px;
+            margin: 0 0 8px;
         }
 
         .lede {
-            font-size: 18px;
+            font-size: 16px;
             color: var(--muted);
-            margin: 0 0 48px;
-            max-width: 560px;
+            margin: 0 0 32px;
+        }
+
+        .launcher-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 16px;
+        }
+        .launcher-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 24px 20px;
+            cursor: pointer;
+            transition: border-color 0.15s, transform 0.05s;
+            text-align: left;
+            color: var(--fg);
+            font-family: inherit;
+            font-size: inherit;
+            user-select: none;
+        }
+        .launcher-card:hover { border-color: var(--accent); }
+        .launcher-card:active { transform: scale(0.98); }
+        .launcher-card .icon {
+            font-size: 28px;
+            margin-bottom: 10px;
+            display: block;
+        }
+        .launcher-card .name { font-weight: 600; font-size: 15px; }
+        .launcher-card .hint { color: var(--muted); font-size: 12px; margin-top: 4px; }
+
+        /* Окна */
+        .window {
+            position: fixed;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            min-width: 320px;
+            min-height: 200px;
+            overflow: hidden;
+        }
+        .window.focused { border-color: var(--accent); }
+        .window-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            background: #1c1f25;
+            border-bottom: 1px solid var(--border);
+            cursor: move;
+            user-select: none;
+            flex-shrink: 0;
+        }
+        .window-title {
+            flex: 1;
+            font-size: 13px;
+            color: var(--fg);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .window-close {
+            background: transparent;
+            color: var(--muted);
+            border: 0;
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+            padding: 0 6px;
+            border-radius: 4px;
+        }
+        .window-close:hover { color: var(--fg); background: rgba(255, 255, 255, 0.06); }
+        .window-body {
+            flex: 1;
+            position: relative;
+            background: #0a0b0d;
+            min-height: 0;
+        }
+        .window-body iframe {
+            width: 100%;
+            height: 100%;
+            border: 0;
+            display: block;
+        }
+        .window-body .empty-placeholder {
+            color: var(--muted);
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+        .window-resize {
+            position: absolute;
+            right: 0;
+            bottom: 0;
+            width: 16px;
+            height: 16px;
+            cursor: nwse-resize;
+            background:
+                linear-gradient(135deg, transparent 50%, var(--muted) 50%, var(--muted) 60%, transparent 60%, transparent 70%, var(--muted) 70%, var(--muted) 80%, transparent 80%);
+            opacity: 0.5;
+        }
+        .window-resize:hover { opacity: 1; }
+        /* При drag/resize — отрубаем pointer-events у iframes, иначе они
+           съедают mousemove. */
+        body.window-dragging iframe { pointer-events: none; }
+
+        .desktop-only-msg {
+            display: none;
+            text-align: center;
+            color: var(--muted);
+            padding: 48px 24px;
+            font-size: 15px;
+        }
+        @media (max-width: 768px) {
+            .launcher-grid { display: none; }
+            .desktop-only-msg { display: block; }
+            .window { display: none; }
         }
     </style>
 </head>
@@ -114,15 +248,215 @@
         </a>
         <div class="nav-links">
             <a href="/">Главная</a>
-            <a href="/tools/" class="active">Инструменты</a>
-            <a href="/projects">Проекты</a>
-            <a href="/me/">Кабинет</a>
+            <a href="/tools/" class="active" data-auth-only hidden>Инструменты</a>
+            <a href="/projects" data-auth-only hidden>Проекты</a>
+            <a href="/me/" data-auth-only hidden>Кабинет</a>
         </div>
+        <a class="login-btn" id="login-btn" href="https://auth.raftforge.art/login" hidden>Войти</a>
     </nav>
+    <script>
+    (function(){
+        var nav = document.querySelector(".topnav");
+        var btn = document.getElementById("login-btn");
+        if (btn) {
+            btn.href = "https://auth.raftforge.art/login?next=" + encodeURIComponent(location.href);
+        }
+        function showLogin() { if (btn) btn.removeAttribute("hidden"); }
+        function showAuthed() {
+            document.querySelectorAll(".topnav [data-auth-only]").forEach(function(e){
+                e.removeAttribute("hidden");
+            });
+        }
+        function reveal() { if (nav) nav.style.visibility = "visible"; }
+        fetch("/auth/whoami", { credentials: "include" })
+            .then(function(r){ return r.ok ? r.json() : { authenticated: false }; })
+            .then(function(d){ if (d && d.authenticated) showAuthed(); else showLogin(); reveal(); })
+            .catch(function(){ showLogin(); reveal(); });
+    })();
+    </script>
 
     <div class="wrap">
         <h1>Инструменты</h1>
-        <p class="lede">Раздел в работе.</p>
+        <p class="lede">Запустите сервис в плавающем окне. Окна можно двигать, ресайзить и открывать несколько одновременно.</p>
+
+        <div class="launcher-grid">
+            <button class="launcher-card" data-service="notes" type="button">
+                <span class="icon">📝</span>
+                <span class="name">Заметки</span>
+                <div class="hint">оригинальный LN-фронт</div>
+            </button>
+            <button class="launcher-card" data-service="diary" type="button">
+                <span class="icon">📔</span>
+                <span class="name">Дневник</span>
+                <div class="hint">копия LN — для дневника</div>
+            </button>
+            <button class="launcher-card" data-service="board" type="button">
+                <span class="icon">🎨</span>
+                <span class="name">Доска</span>
+                <div class="hint">копия LN — для досок</div>
+            </button>
+            <button class="launcher-card" data-service="test" type="button">
+                <span class="icon">🪟</span>
+                <span class="name">Тестовое окно</span>
+                <div class="hint">пустое — для проверки</div>
+            </button>
+        </div>
+
+        <p class="desktop-only-msg">Этот раздел доступен только на ПК.</p>
     </div>
+
+    <script>
+    (function(){
+        if (window.matchMedia("(max-width: 768px)").matches) return;
+
+        var SERVICES = {
+            notes: { title: "Заметки",        url: "https://ln.dev.raftforge.art/" },
+            diary: { title: "Дневник",        url: "https://ln.dev.raftforge.art/diary/" },
+            board: { title: "Доска",          url: "https://ln.dev.raftforge.art/board/" },
+            test:  { title: "Тестовое окно",  url: null }
+        };
+
+        var DEFAULT_W = 1024;
+        var DEFAULT_H = 680;
+        var CASCADE_STEP = 30;
+
+        var zCounter = 100;
+        var openCount = 0;
+        var focusedEl = null;
+
+        function bringToFront(win) {
+            zCounter += 1;
+            win.style.zIndex = String(zCounter);
+            if (focusedEl && focusedEl !== win) focusedEl.classList.remove("focused");
+            focusedEl = win;
+            win.classList.add("focused");
+        }
+
+        function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+        function makeWindow(serviceId) {
+            var svc = SERVICES[serviceId];
+            if (!svc) return;
+
+            var win = document.createElement("div");
+            win.className = "window";
+
+            var w = clamp(DEFAULT_W, 320, window.innerWidth - 40);
+            var h = clamp(DEFAULT_H, 200, window.innerHeight - 80);
+            // Центрируем первое, для следующих cascade.
+            var offset = (openCount % 6) * CASCADE_STEP;
+            var left = clamp((window.innerWidth - w) / 2 + offset, 8, window.innerWidth - w - 8);
+            var top = clamp(60 + offset, 8, window.innerHeight - h - 8);
+            win.style.left = left + "px";
+            win.style.top = top + "px";
+            win.style.width = w + "px";
+            win.style.height = h + "px";
+
+            var header = document.createElement("div");
+            header.className = "window-header";
+            var title = document.createElement("span");
+            title.className = "window-title";
+            title.textContent = svc.title;
+            var closeBtn = document.createElement("button");
+            closeBtn.className = "window-close";
+            closeBtn.type = "button";
+            closeBtn.title = "Закрыть";
+            closeBtn.textContent = "×";
+            header.appendChild(title);
+            header.appendChild(closeBtn);
+
+            var body = document.createElement("div");
+            body.className = "window-body";
+            if (svc.url) {
+                var iframe = document.createElement("iframe");
+                iframe.src = svc.url;
+                iframe.allow = "clipboard-read; clipboard-write; fullscreen";
+                body.appendChild(iframe);
+            } else {
+                var ph = document.createElement("div");
+                ph.className = "empty-placeholder";
+                ph.textContent = "(пусто)";
+                body.appendChild(ph);
+            }
+
+            var resize = document.createElement("div");
+            resize.className = "window-resize";
+
+            win.appendChild(header);
+            win.appendChild(body);
+            win.appendChild(resize);
+            document.body.appendChild(win);
+
+            openCount += 1;
+            bringToFront(win);
+
+            // --- focus on click ---
+            win.addEventListener("mousedown", function(){ bringToFront(win); }, true);
+
+            // --- close ---
+            closeBtn.addEventListener("click", function(e){
+                e.stopPropagation();
+                win.remove();
+            });
+
+            // --- drag ---
+            header.addEventListener("mousedown", function(e){
+                if (e.target === closeBtn) return;
+                e.preventDefault();
+                bringToFront(win);
+                var startX = e.clientX, startY = e.clientY;
+                var rect = win.getBoundingClientRect();
+                var startLeft = rect.left, startTop = rect.top;
+                document.body.classList.add("window-dragging");
+                function onMove(ev){
+                    var nx = clamp(startLeft + (ev.clientX - startX), -rect.width + 80, window.innerWidth - 80);
+                    var ny = clamp(startTop + (ev.clientY - startY), 0, window.innerHeight - 30);
+                    win.style.left = nx + "px";
+                    win.style.top = ny + "px";
+                }
+                function onUp(){
+                    document.removeEventListener("mousemove", onMove);
+                    document.removeEventListener("mouseup", onUp);
+                    document.body.classList.remove("window-dragging");
+                }
+                document.addEventListener("mousemove", onMove);
+                document.addEventListener("mouseup", onUp);
+            });
+
+            // --- resize ---
+            resize.addEventListener("mousedown", function(e){
+                e.preventDefault();
+                e.stopPropagation();
+                bringToFront(win);
+                var startX = e.clientX, startY = e.clientY;
+                var rect = win.getBoundingClientRect();
+                var startW = rect.width, startH = rect.height;
+                document.body.classList.add("window-dragging");
+                function onMove(ev){
+                    var nw = clamp(startW + (ev.clientX - startX), 320, window.innerWidth - rect.left - 8);
+                    var nh = clamp(startH + (ev.clientY - startY), 200, window.innerHeight - rect.top - 8);
+                    win.style.width = nw + "px";
+                    win.style.height = nh + "px";
+                }
+                function onUp(){
+                    document.removeEventListener("mousemove", onMove);
+                    document.removeEventListener("mouseup", onUp);
+                    document.body.classList.remove("window-dragging");
+                }
+                document.addEventListener("mousemove", onMove);
+                document.addEventListener("mouseup", onUp);
+            });
+
+            return win;
+        }
+
+        // launcher click handlers
+        document.querySelectorAll(".launcher-card").forEach(function(card){
+            card.addEventListener("click", function(){
+                makeWindow(card.getAttribute("data-service"));
+            });
+        });
+    })();
+    </script>
 </body>
 </html>

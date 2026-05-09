@@ -81,6 +81,21 @@
             color: var(--accent);
             background: rgba(255,106,61,0.10);
         }
+        .topnav .login-btn {
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            padding: 5px 14px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 14px;
+            margin-left: 12px;
+        }
+        .topnav .login-btn:hover {
+            background: rgba(255,106,61,0.10);
+            text-decoration: none;
+        }
+        /* Скрыто до резолва /auth/whoami — чтобы не мерцало. */
+        .topnav { visibility: hidden; }
         @media (max-width: 600px) {
             .topnav { padding: 12px 16px; gap: 12px; }
             .topnav .brand-link span:not(.topnav-logo) { display: none; }
@@ -125,11 +140,34 @@
         </a>
         <div class="nav-links">
             <a href="/" class="active">Главная</a>
-            <a href="/tools/">Инструменты</a>
-            <a href="/projects">Проекты</a>
-            <a href="/me/">Кабинет</a>
+            <a href="/tools/" data-auth-only hidden>Инструменты</a>
+            <a href="/projects" data-auth-only hidden>Проекты</a>
+            <a href="/me/" data-auth-only hidden>Кабинет</a>
         </div>
+        <a class="login-btn" id="login-btn" href="https://auth.raftforge.art/login" hidden>Войти</a>
     </nav>
+    <script>
+    (function(){
+        var nav = document.querySelector(".topnav");
+        var btn = document.getElementById("login-btn");
+        if (btn) {
+            btn.href = "https://auth.raftforge.art/login?next=" + encodeURIComponent(location.href);
+        }
+        function showLogin() {
+            if (btn) btn.removeAttribute("hidden");
+        }
+        function showAuthed() {
+            document.querySelectorAll(".topnav [data-auth-only]").forEach(function(e){
+                e.removeAttribute("hidden");
+            });
+        }
+        function reveal() { if (nav) nav.style.visibility = "visible"; }
+        fetch("/auth/whoami", { credentials: "include" })
+            .then(function(r){ return r.ok ? r.json() : { authenticated: false }; })
+            .then(function(d){ if (d && d.authenticated) showAuthed(); else showLogin(); reveal(); })
+            .catch(function(){ showLogin(); reveal(); });
+    })();
+    </script>
 
     <div class="wrap">
         <h1>Личная <span class="accent">мастерская</span> инструментов.</h1>
