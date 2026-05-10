@@ -119,33 +119,59 @@
             margin: 0 0 32px;
         }
 
-        .launcher-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 16px;
-        }
-        .launcher-card {
+        /* Тонкая панель инструментов слева, скрытая за слайдером.
+           При hover на узкую trigger-зону у левого края — выезжает. */
+        .toolbar-trigger {
+            position: fixed;
+            left: 0;
+            width: 14px;
             background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 24px 20px;
+            border-right: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--muted);
+            font-size: 14px;
             cursor: pointer;
-            transition: border-color 0.15s, transform 0.05s;
-            text-align: left;
+            z-index: 9999;
+            transition: background 0.12s, color 0.12s, width 0.12s;
+        }
+        .toolbar-trigger:hover { background: rgba(255,106,61,0.10); color: var(--accent); width: 18px; }
+        .toolbar {
+            position: fixed;
+            left: 0;
+            width: 56px;
+            background: var(--card);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 0;
+            transform: translateX(-100%);
+            transition: transform 0.18s ease-out;
+            z-index: 9999;
+        }
+        .toolbar.open { transform: translateX(0); }
+        .toolbar-btn {
+            width: 40px;
+            height: 40px;
+            display: grid;
+            place-items: center;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 22px;
+            line-height: 1;
             color: var(--fg);
             font-family: inherit;
-            font-size: inherit;
             user-select: none;
+            padding: 0;
+            transition: background 0.12s, border-color 0.12s;
         }
-        .launcher-card:hover { border-color: var(--accent); }
-        .launcher-card:active { transform: scale(0.98); }
-        .launcher-card .icon {
-            font-size: 28px;
-            margin-bottom: 10px;
-            display: block;
-        }
-        .launcher-card .name { font-weight: 600; font-size: 15px; }
-        .launcher-card .hint { color: var(--muted); font-size: 12px; margin-top: 4px; }
+        .toolbar-btn:hover { background: rgba(255,255,255,0.06); border-color: var(--border); }
+        .toolbar-btn:active { transform: scale(0.94); }
 
         /* Окна */
         .window {
@@ -180,7 +206,7 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        .window-close {
+        .window-close, .window-max {
             background: transparent;
             color: var(--muted);
             border: 0;
@@ -190,7 +216,10 @@
             padding: 0 6px;
             border-radius: 4px;
         }
-        .window-close:hover { color: var(--fg); background: rgba(255, 255, 255, 0.06); }
+        .window-close:hover, .window-max:hover { color: var(--fg); background: rgba(255, 255, 255, 0.06); }
+        .window-max { display: grid; place-items: center; height: 22px; padding: 0 8px; }
+        .window-max svg { display: block; }
+        .window.maximized .window-resize { display: none; }
         .window-body {
             flex: 1;
             position: relative;
@@ -235,7 +264,7 @@
             font-size: 15px;
         }
         @media (max-width: 768px) {
-            .launcher-grid { display: none; }
+            .toolbar, .toolbar-trigger { display: none; }
             .desktop-only-msg { display: block; }
             .window { display: none; }
         }
@@ -279,50 +308,46 @@
         <h1>Инструменты</h1>
         <p class="lede">Запустите сервис в плавающем окне. Окна можно двигать, ресайзить и открывать несколько одновременно.</p>
 
-        <div class="launcher-grid">
-            <button class="launcher-card" data-service="notes" type="button">
-                <span class="icon">📝</span>
-                <span class="name">Заметки</span>
-                <div class="hint">оригинальный LN-фронт</div>
-            </button>
-            <button class="launcher-card" data-service="diary" type="button">
-                <span class="icon">📔</span>
-                <span class="name">Дневник</span>
-                <div class="hint">копия LN — для дневника</div>
-            </button>
-            <button class="launcher-card" data-service="board" type="button">
-                <span class="icon">🎨</span>
-                <span class="name">Доска</span>
-                <div class="hint">копия LN — для досок</div>
-            </button>
-            <button class="launcher-card" data-service="test" type="button">
-                <span class="icon">🪟</span>
-                <span class="name">Тестовое окно</span>
-                <div class="hint">пустое — для проверки</div>
-            </button>
-        </div>
-
         <p class="desktop-only-msg">Этот раздел доступен только на ПК.</p>
     </div>
+
+    <div class="toolbar-trigger" id="toolbar-trigger" title="Инструменты">›</div>
+    <aside class="toolbar" id="toolbar" aria-label="Панель инструментов">
+        <button class="toolbar-btn" data-service="notes" type="button" title="Заметки">📝</button>
+        <button class="toolbar-btn" data-service="diary" type="button" title="Дневник">📔</button>
+        <button class="toolbar-btn" data-service="board" type="button" title="Доска">🎨</button>
+        <button class="toolbar-btn" data-service="docs" type="button" title="Документы">📄</button>
+    </aside>
 
     <script>
     (function(){
         if (window.matchMedia("(max-width: 768px)").matches) return;
 
         var SERVICES = {
-            notes: { title: "Заметки",        url: "https://ln.dev.raftforge.art/" },
-            diary: { title: "Дневник",        url: "https://ln.dev.raftforge.art/diary/" },
-            board: { title: "Доска",          url: "https://ln.dev.raftforge.art/board/" },
-            test:  { title: "Тестовое окно",  url: null }
+            notes: { title: "Заметки",   url: "https://notes.dev.raftforge.art/" },
+            diary: { title: "Дневник",   url: "https://diary.dev.raftforge.art/" },
+            board: { title: "Доска",     url: "https://board.dev.raftforge.art/" },
+            docs:  { title: "Документы", url: "https://docs.dev.raftforge.art/" }
         };
 
         var DEFAULT_W = 1024;
         var DEFAULT_H = 680;
         var CASCADE_STEP = 30;
 
+        var ICON_MAX = '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor"/></svg>';
+        var ICON_RESTORE = '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><rect x="2.5" y="0.5" width="7" height="7" fill="none" stroke="currentColor"/><rect x="0.5" y="2.5" width="7" height="7" fill="#1c1f25" stroke="currentColor"/></svg>';
+
         var zCounter = 100;
         var openCount = 0;
         var focusedEl = null;
+        var navEl = document.querySelector(".topnav");
+        function navBottom() { return navEl ? navEl.getBoundingClientRect().bottom : 0; }
+        // Ширина видимой полоски-триггера слева. Развёрнутое окно её обходит,
+        // иначе trigger (z-index:9999) перекрывает левый край окна.
+        function triggerWidth() {
+            var el = document.getElementById("toolbar-trigger");
+            return el ? el.getBoundingClientRect().width : 0;
+        }
 
         function bringToFront(win) {
             zCounter += 1;
@@ -341,12 +366,13 @@
             var win = document.createElement("div");
             win.className = "window";
 
+            var navH = navBottom();
             var w = clamp(DEFAULT_W, 320, window.innerWidth - 40);
-            var h = clamp(DEFAULT_H, 200, window.innerHeight - 80);
+            var h = clamp(DEFAULT_H, 200, window.innerHeight - navH - 20);
             // Центрируем первое, для следующих cascade.
             var offset = (openCount % 6) * CASCADE_STEP;
             var left = clamp((window.innerWidth - w) / 2 + offset, 8, window.innerWidth - w - 8);
-            var top = clamp(60 + offset, 8, window.innerHeight - h - 8);
+            var top = clamp(navH + 4 + offset, navH + 4, window.innerHeight - h - 8);
             win.style.left = left + "px";
             win.style.top = top + "px";
             win.style.width = w + "px";
@@ -357,12 +383,18 @@
             var title = document.createElement("span");
             title.className = "window-title";
             title.textContent = svc.title;
+            var maxBtn = document.createElement("button");
+            maxBtn.className = "window-max";
+            maxBtn.type = "button";
+            maxBtn.title = "Развернуть";
+            maxBtn.innerHTML = ICON_MAX;
             var closeBtn = document.createElement("button");
             closeBtn.className = "window-close";
             closeBtn.type = "button";
             closeBtn.title = "Закрыть";
             closeBtn.textContent = "×";
             header.appendChild(title);
+            header.appendChild(maxBtn);
             header.appendChild(closeBtn);
 
             var body = document.createElement("div");
@@ -390,8 +422,12 @@
             openCount += 1;
             bringToFront(win);
 
-            // --- focus on click ---
-            win.addEventListener("mousedown", function(){ bringToFront(win); }, true);
+            // --- focus on click (+ передаём фокус в iframe для keyboard) ---
+            win.addEventListener("mousedown", function(){
+                bringToFront(win);
+                var ifr = win.querySelector("iframe");
+                if (ifr) try { ifr.contentWindow.focus(); } catch (e) {}
+            }, true);
 
             // --- close ---
             closeBtn.addEventListener("click", function(e){
@@ -399,18 +435,83 @@
                 win.remove();
             });
 
-            // --- drag ---
+            // --- maximize / restore ---
+            var prevRect = null;
+            function applyMaximized() {
+                var navH = navBottom();
+                var tw = triggerWidth();
+                win.style.left = tw + "px";
+                win.style.top = navH + "px";
+                win.style.width = (window.innerWidth - tw) + "px";
+                win.style.height = (window.innerHeight - navH) + "px";
+            }
+            function toggleMax() {
+                if (win.classList.contains("maximized")) {
+                    win.style.left = prevRect.left + "px";
+                    win.style.top = prevRect.top + "px";
+                    win.style.width = prevRect.width + "px";
+                    win.style.height = prevRect.height + "px";
+                    win.classList.remove("maximized");
+                    maxBtn.innerHTML = ICON_MAX;
+                    maxBtn.title = "Развернуть";
+                } else {
+                    var rect = win.getBoundingClientRect();
+                    prevRect = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+                    applyMaximized();
+                    win.classList.add("maximized");
+                    maxBtn.innerHTML = ICON_RESTORE;
+                    maxBtn.title = "Уменьшить";
+                }
+                bringToFront(win);
+            }
+            maxBtn.addEventListener("click", function(e){
+                e.stopPropagation();
+                toggleMax();
+            });
+            // Двойной клик по шапке = toggle maximize/restore (Windows-style).
+            header.addEventListener("dblclick", function(e){
+                if (e.target === closeBtn || e.target === maxBtn || maxBtn.contains(e.target)) return;
+                e.preventDefault();
+                toggleMax();
+            });
+            // Подгоняем размер развёрнутого окна при ресайзе viewport.
+            window.addEventListener("resize", function(){
+                if (win.classList.contains("maximized") && document.body.contains(win)) applyMaximized();
+            });
+
+            // --- drag (с поддержкой drag-to-restore из maximized) ---
             header.addEventListener("mousedown", function(e){
-                if (e.target === closeBtn) return;
+                if (e.target === closeBtn || e.target === maxBtn || maxBtn.contains(e.target)) return;
                 e.preventDefault();
                 bringToFront(win);
                 var startX = e.clientX, startY = e.clientY;
                 var rect = win.getBoundingClientRect();
                 var startLeft = rect.left, startTop = rect.top;
+                var wasMaximized = win.classList.contains("maximized");
+                var restored = false;
+                // Доля курсора по горизонтали внутри maximized-окна — чтобы после
+                // restore шапка оказалась под курсором в той же пропорции.
+                var ratioX = wasMaximized && rect.width > 0 ? (startX - rect.left) / rect.width : 0;
                 document.body.classList.add("window-dragging");
                 function onMove(ev){
+                    if (wasMaximized && !restored) {
+                        if (Math.abs(ev.clientX - startX) < 5 && Math.abs(ev.clientY - startY) < 5) return;
+                        toggleMax(); // restore prevRect
+                        var nw = prevRect.width;
+                        var newLeft = ev.clientX - ratioX * nw;
+                        var newTop = Math.max(navBottom(), ev.clientY - 10);
+                        win.style.left = newLeft + "px";
+                        win.style.top = newTop + "px";
+                        startLeft = newLeft;
+                        startTop = newTop;
+                        startX = ev.clientX;
+                        startY = ev.clientY;
+                        rect = win.getBoundingClientRect();
+                        restored = true;
+                        return;
+                    }
                     var nx = clamp(startLeft + (ev.clientX - startX), -rect.width + 80, window.innerWidth - 80);
-                    var ny = clamp(startTop + (ev.clientY - startY), 0, window.innerHeight - 30);
+                    var ny = clamp(startTop + (ev.clientY - startY), navBottom(), window.innerHeight - 30);
                     win.style.left = nx + "px";
                     win.style.top = ny + "px";
                 }
@@ -425,6 +526,7 @@
 
             // --- resize ---
             resize.addEventListener("mousedown", function(e){
+                if (win.classList.contains("maximized")) return;
                 e.preventDefault();
                 e.stopPropagation();
                 bringToFront(win);
@@ -450,12 +552,50 @@
             return win;
         }
 
-        // launcher click handlers
-        document.querySelectorAll(".launcher-card").forEach(function(card){
-            card.addEventListener("click", function(){
-                makeWindow(card.getAttribute("data-service"));
+        // toolbar click handlers
+        document.querySelectorAll(".toolbar-btn").forEach(function(btn){
+            btn.addEventListener("click", function(){
+                makeWindow(btn.getAttribute("data-service"));
             });
         });
+
+        // toolbar slide-out: позиционируем по navbar и показываем на hover
+        // (либо на самой панели, либо на узкой trigger-зоне у левого края).
+        var toolbar = document.getElementById("toolbar");
+        var trigger = document.getElementById("toolbar-trigger");
+        function placeToolbar() {
+            var top = navBottom();
+            toolbar.style.top = top + "px";
+            toolbar.style.height = (window.innerHeight - top) + "px";
+            trigger.style.top = top + "px";
+            trigger.style.height = (window.innerHeight - top) + "px";
+        }
+        placeToolbar();
+        window.addEventListener("resize", placeToolbar);
+        window.addEventListener("scroll", placeToolbar, { passive: true });
+        function open() { toolbar.classList.add("open"); }
+        function close() { toolbar.classList.remove("open"); }
+        trigger.addEventListener("mouseenter", open);
+        toolbar.addEventListener("mouseenter", open);
+        toolbar.addEventListener("mouseleave", close);
+
+        // Если фокус остался на parent (raftforge.art) — пересылаем keydown в
+        // активное окно-iframe через postMessage. Cross-origin iframe сам события
+        // клавиатуры от parent не получает.
+        window.addEventListener("keydown", function(e){
+            if (!focusedEl) return;
+            var ae = document.activeElement;
+            // Forward только если фокус "болтается" в parent body (а не на input/button parent
+            // и не на самом iframe — там native keydown пройдёт сам без двойного срабатывания).
+            if (ae !== document.body) return;
+            var ifr = focusedEl.querySelector("iframe");
+            if (!ifr || !ifr.contentWindow) return;
+            ifr.contentWindow.postMessage({
+                __toolsKey: true,
+                key: e.key, code: e.code,
+                ctrlKey: e.ctrlKey, shiftKey: e.shiftKey, metaKey: e.metaKey, altKey: e.altKey,
+            }, "*");
+        }, true);
     })();
     </script>
 </body>
