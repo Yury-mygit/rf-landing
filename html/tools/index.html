@@ -256,17 +256,109 @@
            съедают mousemove. */
         body.window-dragging iframe { pointer-events: none; }
 
-        .desktop-only-msg {
-            display: none;
-            text-align: center;
-            color: var(--muted);
-            padding: 48px 24px;
-            font-size: 15px;
-        }
+        /* Мобильный bottom-sheet с кнопками + fullscreen viewer ниже шапки */
+        .mobile-bottombar, .mobile-viewer, .mobile-only-msg { display: none; }
+
         @media (max-width: 768px) {
             .toolbar, .toolbar-trigger { display: none; }
-            .desktop-only-msg { display: block; }
             .window { display: none; }
+            .lede { display: none; }
+            .wrap { padding-bottom: 80px; }
+            .mobile-only-msg {
+                display: block;
+                color: var(--muted);
+                font-size: 14px;
+                margin: 0 0 16px;
+            }
+
+            .mobile-bottombar {
+                display: block;
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: var(--card);
+                border-top: 1px solid var(--border);
+                z-index: 9999;
+                transform: translateY(calc(100% - 40px));
+                transition: transform 0.22s ease-out;
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+            .mobile-bottombar.open { transform: translateY(0); }
+            .mobile-handle {
+                height: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                user-select: none;
+            }
+            .mobile-handle::before {
+                content: "";
+                width: 44px;
+                height: 4px;
+                border-radius: 2px;
+                background: var(--muted);
+                opacity: 0.6;
+            }
+            .mobile-buttons {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 8px;
+                padding: 4px 12px 16px;
+            }
+            .mobile-tool-btn {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 6px;
+                padding: 12px 4px;
+                background: transparent;
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                color: var(--fg);
+                font-family: inherit;
+                font-size: 11px;
+                cursor: pointer;
+            }
+            .mobile-tool-btn:active { background: rgba(255,255,255,0.06); }
+            .mobile-tool-btn .icon { font-size: 22px; line-height: 1; }
+
+            .mobile-viewer {
+                display: none;
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: var(--bg);
+                z-index: 10000;
+            }
+            .mobile-viewer.open { display: block; }
+            .mobile-viewer iframe {
+                width: 100%;
+                height: 100%;
+                border: 0;
+                display: block;
+            }
+            .mobile-viewer-close {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                background: rgba(0,0,0,0.55);
+                color: #fff;
+                border: 1px solid var(--border);
+                font-size: 22px;
+                line-height: 1;
+                cursor: pointer;
+                z-index: 1;
+                display: grid;
+                place-items: center;
+                padding: 0;
+                font-family: inherit;
+            }
         }
     </style>
 </head>
@@ -308,7 +400,21 @@
         <h1>Инструменты</h1>
         <p class="lede">Запустите сервис в плавающем окне. Окна можно двигать, ресайзить и открывать несколько одновременно.</p>
 
-        <p class="desktop-only-msg">Этот раздел доступен только на ПК.</p>
+        <p class="mobile-only-msg">Откройте панель внизу и выберите инструмент.</p>
+    </div>
+
+    <div class="mobile-bottombar" id="mobile-bottombar" aria-label="Панель инструментов">
+        <div class="mobile-handle" id="mobile-handle" role="button" aria-label="Открыть или закрыть панель"></div>
+        <div class="mobile-buttons">
+            <button class="mobile-tool-btn" data-service="notes" type="button"><span class="icon">📝</span>Заметки</button>
+            <button class="mobile-tool-btn" data-service="diary" type="button"><span class="icon">📔</span>Дневник</button>
+            <button class="mobile-tool-btn" data-service="board" type="button"><span class="icon">🎨</span>Доска</button>
+            <button class="mobile-tool-btn" data-service="docs" type="button"><span class="icon">📄</span>Документы</button>
+        </div>
+    </div>
+    <div class="mobile-viewer" id="mobile-viewer" aria-hidden="true">
+        <button class="mobile-viewer-close" id="mobile-viewer-close" type="button" aria-label="Закрыть">×</button>
+        <iframe id="mobile-viewer-iframe" allow="clipboard-read; clipboard-write; fullscreen"></iframe>
     </div>
 
     <div class="toolbar-trigger" id="toolbar-trigger" title="Инструменты">›</div>
@@ -320,15 +426,19 @@
     </aside>
 
     <script>
+    window.__TOOLS_SERVICES = {
+        notes: { title: "Заметки",   url: "https://notes.dev.raftforge.art/" },
+        diary: { title: "Дневник",   url: "https://diary.dev.raftforge.art/" },
+        board: { title: "Доска",     url: "https://board.dev.raftforge.art/" },
+        docs:  { title: "Документы", url: "https://docs.dev.raftforge.art/" }
+    };
+    </script>
+
+    <script>
     (function(){
         if (window.matchMedia("(max-width: 768px)").matches) return;
 
-        var SERVICES = {
-            notes: { title: "Заметки",   url: "https://notes.dev.raftforge.art/" },
-            diary: { title: "Дневник",   url: "https://diary.dev.raftforge.art/" },
-            board: { title: "Доска",     url: "https://board.dev.raftforge.art/" },
-            docs:  { title: "Документы", url: "https://docs.dev.raftforge.art/" }
-        };
+        var SERVICES = window.__TOOLS_SERVICES;
 
         var DEFAULT_W = 1024;
         var DEFAULT_H = 680;
@@ -596,6 +706,61 @@
                 ctrlKey: e.ctrlKey, shiftKey: e.shiftKey, metaKey: e.metaKey, altKey: e.altKey,
             }, "*");
         }, true);
+    })();
+    </script>
+
+    <script>
+    // Мобильная ветка: bottom-sheet (тап по handle = toggle) + fullscreen iframe ниже шапки.
+    (function(){
+        if (!window.matchMedia("(max-width: 768px)").matches) return;
+
+        var SERVICES = window.__TOOLS_SERVICES;
+        var bottombar = document.getElementById("mobile-bottombar");
+        var handle = document.getElementById("mobile-handle");
+        var viewer = document.getElementById("mobile-viewer");
+        var viewerIframe = document.getElementById("mobile-viewer-iframe");
+        var viewerClose = document.getElementById("mobile-viewer-close");
+        var navEl = document.querySelector(".topnav");
+
+        function navHeight() { return navEl ? navEl.getBoundingClientRect().height : 0; }
+
+        function placeViewer() { viewer.style.top = navHeight() + "px"; }
+
+        handle.addEventListener("click", function(e){
+            e.stopPropagation();
+            bottombar.classList.toggle("open");
+        });
+
+        document.addEventListener("click", function(e){
+            if (bottombar.classList.contains("open") && !bottombar.contains(e.target)) {
+                bottombar.classList.remove("open");
+            }
+        });
+
+        bottombar.querySelectorAll(".mobile-tool-btn").forEach(function(btn){
+            btn.addEventListener("click", function(e){
+                e.stopPropagation();
+                var svc = SERVICES[btn.getAttribute("data-service")];
+                if (!svc) return;
+                placeViewer();
+                viewerIframe.src = svc.url;
+                viewer.classList.add("open");
+                viewer.setAttribute("aria-hidden", "false");
+                bottombar.classList.remove("open");
+                document.body.style.overflow = "hidden";
+            });
+        });
+
+        viewerClose.addEventListener("click", function(){
+            viewer.classList.remove("open");
+            viewer.setAttribute("aria-hidden", "true");
+            viewerIframe.src = "about:blank";
+            document.body.style.overflow = "";
+        });
+
+        window.addEventListener("resize", function(){
+            if (viewer.classList.contains("open")) placeViewer();
+        });
     })();
     </script>
 </body>
