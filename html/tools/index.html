@@ -119,40 +119,29 @@
             margin: 0 0 32px;
         }
 
-        /* Тонкая панель инструментов слева, скрытая за слайдером.
-           При hover на узкую trigger-зону у левого края — выезжает. */
-        .toolbar-trigger {
+        /* Десктопный док инструментов снизу по центру.
+           Default — прозрачный фон, видны только ярлыки.
+           При hover на сам док — card-фон, читается как панель. */
+        .desktop-dock {
             position: fixed;
-            left: 0;
-            width: 14px;
-            background: var(--card);
-            border-right: 1px solid var(--border);
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
             display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--muted);
-            font-size: 14px;
-            cursor: pointer;
-            z-index: 9999;
-            transition: background 0.12s, color 0.12s, width 0.12s;
-        }
-        .toolbar-trigger:hover { background: rgba(255,106,61,0.10); color: var(--accent); width: 18px; }
-        .toolbar {
-            position: fixed;
-            left: 0;
-            width: 56px;
-            background: var(--card);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-            padding: 10px 0;
-            transform: translateX(-100%);
-            transition: transform 0.18s ease-out;
+            gap: 4px;
+            padding: 8px 12px 10px;
+            border: 1px solid transparent;
+            border-bottom: 0;
+            border-radius: 12px 12px 0 0;
+            background: transparent;
+            transition: background 0.18s, border-color 0.18s, padding 0.18s;
             z-index: 9999;
         }
-        .toolbar.open { transform: translateX(0); }
+        .desktop-dock:hover {
+            background: var(--card);
+            border-color: var(--border);
+            padding: 12px 16px 14px;
+        }
         .toolbar-btn {
             width: 40px;
             height: 40px;
@@ -260,7 +249,7 @@
         .mobile-bottombar, .mobile-viewer, .mobile-only-msg { display: none; }
 
         @media (max-width: 768px) {
-            .toolbar, .toolbar-trigger { display: none; }
+            .desktop-dock { display: none; }
             .window { display: none; }
             .lede { display: none; }
             .wrap { padding-bottom: 80px; }
@@ -417,13 +406,12 @@
         <iframe id="mobile-viewer-iframe" allow="clipboard-read; clipboard-write; fullscreen"></iframe>
     </div>
 
-    <div class="toolbar-trigger" id="toolbar-trigger" title="Инструменты">›</div>
-    <aside class="toolbar" id="toolbar" aria-label="Панель инструментов">
+    <div class="desktop-dock" id="desktop-dock" aria-label="Панель инструментов">
         <button class="toolbar-btn" data-service="notes" type="button" title="Заметки">📝</button>
         <button class="toolbar-btn" data-service="diary" type="button" title="Дневник">📔</button>
         <button class="toolbar-btn" data-service="board" type="button" title="Доска">🎨</button>
         <button class="toolbar-btn" data-service="docs" type="button" title="Документы">📄</button>
-    </aside>
+    </div>
 
     <script>
     window.__TOOLS_SERVICES = {
@@ -662,32 +650,12 @@
             return win;
         }
 
-        // toolbar click handlers
-        document.querySelectorAll(".toolbar-btn").forEach(function(btn){
+        // dock click handlers — открывают сервис в плавающем окне
+        document.querySelectorAll(".desktop-dock .toolbar-btn").forEach(function(btn){
             btn.addEventListener("click", function(){
                 makeWindow(btn.getAttribute("data-service"));
             });
         });
-
-        // toolbar slide-out: позиционируем по navbar и показываем на hover
-        // (либо на самой панели, либо на узкой trigger-зоне у левого края).
-        var toolbar = document.getElementById("toolbar");
-        var trigger = document.getElementById("toolbar-trigger");
-        function placeToolbar() {
-            var top = navBottom();
-            toolbar.style.top = top + "px";
-            toolbar.style.height = (window.innerHeight - top) + "px";
-            trigger.style.top = top + "px";
-            trigger.style.height = (window.innerHeight - top) + "px";
-        }
-        placeToolbar();
-        window.addEventListener("resize", placeToolbar);
-        window.addEventListener("scroll", placeToolbar, { passive: true });
-        function open() { toolbar.classList.add("open"); }
-        function close() { toolbar.classList.remove("open"); }
-        trigger.addEventListener("mouseenter", open);
-        toolbar.addEventListener("mouseenter", open);
-        toolbar.addEventListener("mouseleave", close);
 
         // Если фокус остался на parent (raftforge.art) — пересылаем keydown в
         // активное окно-iframe через postMessage. Cross-origin iframe сам события
