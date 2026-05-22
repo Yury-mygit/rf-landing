@@ -458,20 +458,85 @@
 
         function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
-        function makeWindow(serviceId) {
+        // --- persistence ---
+        var STORAGE_KEY = "tools.windows.v1";
+        var restoring = false; // подавляет saveState во время восстановления
+        function saveState() {
+            if (restoring) return;
+            try {
+                var wins = document.querySelectorAll(".window");
+                var arr = [];
+                wins.forEach(function(win){
+                    var svc = win.dataset.service;
+                    if (!svc) return;
+                    var maximized = win.classList.contains("maximized");
+                    var rect;
+                    if (maximized) {
+                        // У maximized окна в DOM текущие coords — fullscreen.
+                        // Сохраняем restore-координаты из dataset.
+                        rect = {
+                            left: parseFloat(win.dataset.prevLeft),
+                            top: parseFloat(win.dataset.prevTop),
+                            width: parseFloat(win.dataset.prevWidth),
+                            height: parseFloat(win.dataset.prevHeight),
+                        };
+                        if (isNaN(rect.left)) return; // без prevRect максимизация невалидна — пропускаем
+                    } else {
+                        var r = win.getBoundingClientRect();
+                        rect = { left: r.left, top: r.top, width: r.width, height: r.height };
+                    }
+                    arr.push({
+                        service: svc,
+                        left: Math.round(rect.left),
+                        top: Math.round(rect.top),
+                        width: Math.round(rect.width),
+                        height: Math.round(rect.height),
+                        maximized: maximized,
+                    });
+                });
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+            } catch (e) {}
+        }
+        function loadState() {
+            try {
+                var raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return;
+                var arr = JSON.parse(raw);
+                if (!Array.isArray(arr)) return;
+                restoring = true;
+                arr.forEach(function(s){
+                    if (!s || !SERVICES[s.service]) return;
+                    var win = makeWindow(s.service, s);
+                });
+                restoring = false;
+                saveState(); // sync на случай если что-то отсеялось
+            } catch (e) { restoring = false; }
+        }
+
+        function makeWindow(serviceId, restore) {
             var svc = SERVICES[serviceId];
             if (!svc) return;
 
             var win = document.createElement("div");
             win.className = "window";
+            win.dataset.service = serviceId;
 
             var navH = navBottom();
-            var w = clamp(DEFAULT_W, 320, window.innerWidth - 40);
-            var h = clamp(DEFAULT_H, 200, window.innerHeight - navH - 20);
-            // Центрируем первое, для следующих cascade.
-            var offset = (openCount % 6) * CASCADE_STEP;
-            var left = clamp((window.innerWidth - w) / 2 + offset, 8, window.innerWidth - w - 8);
-            var top = clamp(navH + 4 + offset, navH + 4, window.innerHeight - h - 8);
+            var w, h, left, top;
+            if (restore) {
+                // Клампим под текущий viewport — на случай если он стал уже.
+                w = clamp(restore.width, 320, window.innerWidth - 40);
+                h = clamp(restore.height, 200, window.innerHeight - navH - 20);
+                left = clamp(restore.left, 8, Math.max(8, window.innerWidth - w - 8));
+                top = clamp(restore.top, navH + 4, Math.max(navH + 4, window.innerHeight - h - 8));
+            } else {
+                w = clamp(DEFAULT_W, 320, window.innerWidth - 40);
+                h = clamp(DEFAULT_H, 200, window.innerHeight - navH - 20);
+                // Центрируем первое, для следующих cascade.
+                var offset = (openCount % 6) * CASCADE_STEP;
+                left = clamp((window.innerWidth - w) / 2 + offset, 8, window.innerWidth - w - 8);
+                top = clamp(navH + 4 + offset, navH + 4, window.innerHeight - h - 8);
+            }
             win.style.left = left + "px";
             win.style.top = top + "px";
             win.style.width = w + "px";
@@ -538,6 +603,7 @@
             closeBtn.addEventListener("click", function(e){
                 e.stopPropagation();
                 win.remove();
+                saveState();
             });
 
             // --- reload (переустанавливаем src, т.к. cross-origin .reload() заблокирован) ---
@@ -547,8 +613,7 @@
                 if (ifr) ifr.src = ifr.src;
             });
 
-            // --- maximize / restore ---
-            var prevRect = null;
+            // --- maximize / restore (prevRect живёт в dataset — чтобы saveState мог читать) ---
             function applyMaximized() {
                 var navH = navBottom();
                 var tw = triggerWidth();
@@ -559,22 +624,26 @@
             }
             function toggleMax() {
                 if (win.classList.contains("maximized")) {
-                    win.style.left = prevRect.left + "px";
-                    win.style.top = prevRect.top + "px";
-                    win.style.width = prevRect.width + "px";
-                    win.style.height = prevRect.height + "px";
+                    win.style.left = win.dataset.prevLeft + "px";
+                    win.style.top = win.dataset.prevTop + "px";
+                    win.style.width = win.dataset.prevWidth + "px";
+                    win.style.height = win.dataset.prevHeight + "px";
                     win.classList.remove("maximized");
                     maxBtn.innerHTML = ICON_MAX;
                     maxBtn.title = "Развернуть";
                 } else {
                     var rect = win.getBoundingClientRect();
-                    prevRect = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+                    win.dataset.prevLeft = String(Math.round(rect.left));
+                    win.dataset.prevTop = String(Math.round(rect.top));
+                    win.dataset.prevWidth = String(Math.round(rect.width));
+                    win.dataset.prevHeight = String(Math.round(rect.height));
                     applyMaximized();
                     win.classList.add("maximized");
                     maxBtn.innerHTML = ICON_RESTORE;
                     maxBtn.title = "Уменьшить";
                 }
                 bringToFront(win);
+                saveState();
             }
             maxBtn.addEventListener("click", function(e){
                 e.stopPropagation();
@@ -608,8 +677,8 @@
                 function onMove(ev){
                     if (wasMaximized && !restored) {
                         if (Math.abs(ev.clientX - startX) < 5 && Math.abs(ev.clientY - startY) < 5) return;
-                        toggleMax(); // restore prevRect
-                        var nw = prevRect.width;
+                        toggleMax(); // restore из dataset
+                        var nw = parseFloat(win.dataset.prevWidth) || rect.width;
                         var newLeft = ev.clientX - ratioX * nw;
                         var newTop = Math.max(navBottom(), ev.clientY - 10);
                         win.style.left = newLeft + "px";
@@ -631,6 +700,7 @@
                     document.removeEventListener("mousemove", onMove);
                     document.removeEventListener("mouseup", onUp);
                     document.body.classList.remove("window-dragging");
+                    saveState();
                 }
                 document.addEventListener("mousemove", onMove);
                 document.addEventListener("mouseup", onUp);
@@ -656,11 +726,18 @@
                     document.removeEventListener("mousemove", onMove);
                     document.removeEventListener("mouseup", onUp);
                     document.body.classList.remove("window-dragging");
+                    saveState();
                 }
                 document.addEventListener("mousemove", onMove);
                 document.addEventListener("mouseup", onUp);
             });
 
+            // Восстановление maximized-состояния — после полного создания окна.
+            if (restore && restore.maximized) {
+                toggleMax();
+            }
+
+            saveState();
             return win;
         }
 
@@ -670,6 +747,11 @@
                 makeWindow(btn.getAttribute("data-service"));
             });
         });
+
+        // Восстанавливаем ранее открытые окна (только desktop — на mobile другой UI).
+        if (!window.matchMedia("(max-width: 768px)").matches) {
+            loadState();
+        }
 
         // Если фокус остался на parent (raftforge.art) — пересылаем keydown в
         // активное окно-iframe через postMessage. Cross-origin iframe сам события
