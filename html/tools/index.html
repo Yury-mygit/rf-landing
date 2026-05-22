@@ -195,7 +195,7 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        .window-close, .window-max {
+        .window-close, .window-max, .window-reload {
             background: transparent;
             color: var(--muted);
             border: 0;
@@ -205,9 +205,9 @@
             padding: 0 6px;
             border-radius: 4px;
         }
-        .window-close:hover, .window-max:hover { color: var(--fg); background: rgba(255, 255, 255, 0.06); }
-        .window-max { display: grid; place-items: center; height: 22px; padding: 0 8px; }
-        .window-max svg { display: block; }
+        .window-close:hover, .window-max:hover, .window-reload:hover { color: var(--fg); background: rgba(255, 255, 255, 0.06); }
+        .window-max, .window-reload { display: grid; place-items: center; height: 22px; padding: 0 8px; }
+        .window-max svg, .window-reload svg { display: block; }
         .window.maximized .window-resize { display: none; }
         .window-body {
             flex: 1;
@@ -434,6 +434,7 @@
 
         var ICON_MAX = '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor"/></svg>';
         var ICON_RESTORE = '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><rect x="2.5" y="0.5" width="7" height="7" fill="none" stroke="currentColor"/><rect x="0.5" y="2.5" width="7" height="7" fill="#1c1f25" stroke="currentColor"/></svg>';
+        var ICON_RELOAD = '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 6a4.5 4.5 0 1 1-1.32-3.18"/><polyline points="10.5 1.5 10.5 4.5 7.5 4.5"/></svg>';
 
         var zCounter = 100;
         var openCount = 0;
@@ -481,6 +482,11 @@
             var title = document.createElement("span");
             title.className = "window-title";
             title.textContent = svc.title;
+            var reloadBtn = document.createElement("button");
+            reloadBtn.className = "window-reload";
+            reloadBtn.type = "button";
+            reloadBtn.title = "Перезагрузить";
+            reloadBtn.innerHTML = ICON_RELOAD;
             var maxBtn = document.createElement("button");
             maxBtn.className = "window-max";
             maxBtn.type = "button";
@@ -492,6 +498,7 @@
             closeBtn.title = "Закрыть";
             closeBtn.textContent = "×";
             header.appendChild(title);
+            header.appendChild(reloadBtn);
             header.appendChild(maxBtn);
             header.appendChild(closeBtn);
 
@@ -531,6 +538,13 @@
             closeBtn.addEventListener("click", function(e){
                 e.stopPropagation();
                 win.remove();
+            });
+
+            // --- reload (переустанавливаем src, т.к. cross-origin .reload() заблокирован) ---
+            reloadBtn.addEventListener("click", function(e){
+                e.stopPropagation();
+                var ifr = win.querySelector("iframe");
+                if (ifr) ifr.src = ifr.src;
             });
 
             // --- maximize / restore ---
