@@ -140,9 +140,10 @@
         </a>
         <div class="nav-links">
             <a href="/" class="active">Главная</a>
-            <a href="/tools/" data-auth-only hidden>Инструменты</a>
-            <a href="/projects" data-auth-only hidden>Проекты</a>
-            <a href="/me/" data-auth-only hidden>Кабинет</a>
+            <a href="/tools/" data-nav="tools" hidden>Инструменты</a>
+            <a href="/projects" data-nav="projects" hidden>Проекты</a>
+            <a href="/system/" data-nav="system" hidden>Система</a>
+            <a href="/me/" data-nav="profile" hidden>Кабинет</a>
         </div>
         <a class="login-btn" id="login-btn" href="https://auth.raftforge.art/login" hidden>Войти</a>
     </nav>
@@ -153,19 +154,50 @@
         if (btn) {
             btn.href = "https://auth.raftforge.art/login?next=" + encodeURIComponent(location.href);
         }
-        function showLogin() {
-            if (btn) btn.removeAttribute("hidden");
-        }
-        function showAuthed() {
-            document.querySelectorAll(".topnav [data-auth-only]").forEach(function(e){
-                e.removeAttribute("hidden");
+        function applyState(d) {
+            document.querySelectorAll(".topnav [data-nav]").forEach(function(e){
+                var key = e.getAttribute("data-nav");
+                var visible = false;
+                if (key === "profile") visible = !!(d && d.authenticated);
+                else visible = !!(d && d.nav && d.nav[key]);
+                if (visible) e.removeAttribute("hidden"); else e.setAttribute("hidden", "");
             });
+            if (btn) {
+                if (d && d.authenticated) btn.setAttribute("hidden", "");
+                else btn.removeAttribute("hidden");
+            }
         }
         function reveal() { if (nav) nav.style.visibility = "visible"; }
-        fetch("/auth/whoami", { credentials: "include" })
-            .then(function(r){ return r.ok ? r.json() : { authenticated: false }; })
-            .then(function(d){ if (d && d.authenticated) showAuthed(); else showLogin(); reveal(); })
-            .catch(function(){ showLogin(); reveal(); });
+
+        var lastVersion = null;
+        function fetchWhoami() {
+            return fetch("/auth/whoami", { credentials: "include", cache: "no-store" })
+                .then(function(r){ return r.ok ? r.json() : { authenticated: false, version: "anon" }; })
+                .catch(function(){ return { authenticated: false, version: "anon" }; });
+        }
+        fetchWhoami().then(function(d){ lastVersion = d.version; applyState(d); reveal(); });
+
+        // Revalidation на пользовательских событиях (без background polling):
+        // клик/сабмит/возврат на вкладку → перечитать whoami, при смене version → reload.
+        var inflight = false;
+        function recheck() {
+            if (inflight) return;
+            inflight = true;
+            fetchWhoami().then(function(d){
+                inflight = false;
+                if (lastVersion !== null && d.version !== lastVersion) {
+                    location.reload();
+                } else {
+                    lastVersion = d.version;
+                    applyState(d);
+                }
+            });
+        }
+        document.addEventListener("click", recheck, true);
+        document.addEventListener("submit", recheck, true);
+        document.addEventListener("visibilitychange", function(){
+            if (document.visibilityState === "visible") recheck();
+        });
     })();
     </script>
 
