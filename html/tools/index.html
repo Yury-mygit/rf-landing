@@ -492,6 +492,11 @@
             var el = document.getElementById("toolbar-trigger");
             return el ? el.getBoundingClientRect().width : 0;
         }
+        // Высота dock'а внизу — окно не должно под него залазить.
+        // Берём свёрнутую высоту (без hover-расширения) чтобы при hover
+        // dock на мгновение не подскакивал поверх контента.
+        var dockEl = document.getElementById("desktop-dock");
+        function dockHeight() { return dockEl ? dockEl.getBoundingClientRect().height : 0; }
 
         function bringToFront(win) {
             zCounter += 1;
@@ -567,20 +572,22 @@
             win.dataset.service = serviceId;
 
             var navH = navBottom();
+            var dockH = dockHeight();
+            var maxH = window.innerHeight - navH - dockH - 20;
             var w, h, left, top;
             if (restore) {
                 // Клампим под текущий viewport — на случай если он стал уже.
                 w = clamp(restore.width, 320, window.innerWidth - 40);
-                h = clamp(restore.height, 200, window.innerHeight - navH - 20);
+                h = clamp(restore.height, 200, maxH);
                 left = clamp(restore.left, 8, Math.max(8, window.innerWidth - w - 8));
-                top = clamp(restore.top, navH + 4, Math.max(navH + 4, window.innerHeight - h - 8));
+                top = clamp(restore.top, navH + 4, Math.max(navH + 4, window.innerHeight - dockH - h - 8));
             } else {
                 w = clamp(DEFAULT_W, 320, window.innerWidth - 40);
-                h = clamp(DEFAULT_H, 200, window.innerHeight - navH - 20);
+                h = clamp(DEFAULT_H, 200, maxH);
                 // Центрируем первое, для следующих cascade.
                 var offset = (openCount % 6) * CASCADE_STEP;
                 left = clamp((window.innerWidth - w) / 2 + offset, 8, window.innerWidth - w - 8);
-                top = clamp(navH + 4 + offset, navH + 4, window.innerHeight - h - 8);
+                top = clamp(navH + 4 + offset, navH + 4, window.innerHeight - dockH - h - 8);
             }
             win.style.left = left + "px";
             win.style.top = top + "px";
@@ -661,11 +668,12 @@
             // --- maximize / restore (prevRect живёт в dataset — чтобы saveState мог читать) ---
             function applyMaximized() {
                 var navH = navBottom();
+                var dockH = dockHeight();
                 var tw = triggerWidth();
                 win.style.left = tw + "px";
                 win.style.top = navH + "px";
                 win.style.width = (window.innerWidth - tw) + "px";
-                win.style.height = (window.innerHeight - navH) + "px";
+                win.style.height = (window.innerHeight - navH - dockH) + "px";
             }
             function toggleMax() {
                 if (win.classList.contains("maximized")) {
@@ -737,7 +745,7 @@
                         return;
                     }
                     var nx = clamp(startLeft + (ev.clientX - startX), -rect.width + 80, window.innerWidth - 80);
-                    var ny = clamp(startTop + (ev.clientY - startY), navBottom(), window.innerHeight - 30);
+                    var ny = clamp(startTop + (ev.clientY - startY), navBottom(), window.innerHeight - dockHeight() - 30);
                     win.style.left = nx + "px";
                     win.style.top = ny + "px";
                 }
@@ -763,7 +771,7 @@
                 document.body.classList.add("window-dragging");
                 function onMove(ev){
                     var nw = clamp(startW + (ev.clientX - startX), 320, window.innerWidth - rect.left - 8);
-                    var nh = clamp(startH + (ev.clientY - startY), 200, window.innerHeight - rect.top - 8);
+                    var nh = clamp(startH + (ev.clientY - startY), 200, window.innerHeight - rect.top - dockHeight() - 8);
                     win.style.width = nw + "px";
                     win.style.height = nh + "px";
                 }
