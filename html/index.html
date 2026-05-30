@@ -26,6 +26,11 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
+            /* iOS Safari в портрете auto-увеличивает базовый шрифт
+               (boost для readability). Fix через 100% — отключаем boost,
+               рендер 1:1 как задумано. */
+            -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
         }
 
         a { color: var(--accent); text-decoration: none; }
