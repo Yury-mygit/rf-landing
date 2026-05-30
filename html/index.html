@@ -69,14 +69,20 @@
             font-weight: 700;
             font-size: 15px;
         }
-        .topnav .nav-links { display: flex; gap: 6px; flex-wrap: wrap; }
+        .topnav .nav-links { display: flex; gap: 6px; flex-wrap: nowrap; }
         .topnav .nav-links a {
             color: var(--muted);
             text-decoration: none;
             padding: 6px 14px;
             border-radius: 6px;
             font-size: 15px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
+        .topnav .nav-links a svg,
+        .topnav .login-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+        .topnav .login-btn { display: inline-flex; align-items: center; gap: 6px; }
         .topnav .nav-links a:hover {
             color: var(--fg);
             background: rgba(255,255,255,0.04);
@@ -102,9 +108,12 @@
         /* Скрыто до резолва /auth/whoami — чтобы не мерцало. */
         .topnav { visibility: hidden; }
         @media (max-width: 600px) {
-            .topnav { padding: 12px 16px; gap: 12px; }
+            .topnav { padding: 12px 12px; gap: 10px; }
             .topnav .brand-link span:not(.topnav-logo) { display: none; }
-            .topnav .nav-links a { padding: 6px 10px; font-size: 14px; }
+            .topnav .nav-links a { padding: 8px; gap: 0; }
+            .topnav .nav-links a span,
+            .topnav .login-btn span { display: none; }
+            .topnav .login-btn { padding: 6px 8px; }
         }
 
         .wrap {
@@ -144,13 +153,31 @@
             <span class="topnav-logo">R</span><span>RaftForge</span>
         </a>
         <div class="nav-links">
-            <a href="/" class="active">Главная</a>
-            <a href="/tools/" data-nav="tools" hidden>Инструменты</a>
-            <a href="/projects" data-nav="projects" hidden>Проекты</a>
-            <a href="/system/" data-nav="system" hidden>Система</a>
-            <a href="/me/" data-nav="profile" hidden>Кабинет</a>
+            <a href="/" class="active" title="Главная" aria-label="Главная">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>
+                <span>Главная</span>
+            </a>
+            <a href="/tools/" data-nav="tools" hidden title="Инструменты" aria-label="Инструменты">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14.7 6.3 3 3-2 2-3-3a4 4 0 0 1 5-5l-3 3 2 2 3-3a4 4 0 0 0-5-5z"/><path d="m6.4 16.6 8.3-8.3-2.8-2.8L5 12.5"/><path d="M5 12.5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2"/></svg>
+                <span>Инструменты</span>
+            </a>
+            <a href="/projects" data-nav="projects" hidden title="Проекты" aria-label="Проекты">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/></svg>
+                <span>Проекты</span>
+            </a>
+            <a href="/system/" data-nav="system" hidden title="Система" aria-label="Система">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="7" rx="1"/><rect x="3" y="13" width="18" height="7" rx="1"/><circle cx="7" cy="7.5" r="0.6" fill="currentColor" stroke="none"/><circle cx="7" cy="16.5" r="0.6" fill="currentColor" stroke="none"/></svg>
+                <span>Система</span>
+            </a>
+            <a href="/me/" data-nav="profile" hidden title="Кабинет" aria-label="Кабинет">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+                <span>Кабинет</span>
+            </a>
         </div>
-        <a class="login-btn" id="login-btn" href="https://auth.raftforge.art/login" hidden>Войти</a>
+        <a class="login-btn" id="login-btn" href="https://auth.raftforge.art/login" hidden title="Войти" aria-label="Войти">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></svg>
+            <span>Войти</span>
+        </a>
     </nav>
     <script>
     (function(){
