@@ -402,7 +402,7 @@
             btn.href = "https://auth.raftforge.art/login?next=" + encodeURIComponent(location.href);
         }
         // service-name → required resource. Должно совпадать с window.__TOOLS_SERVICES.
-        var SERVICE_RES = { notes: "notes-dev", diary: "diary-dev", board: "board-dev", docs: "docs-dev" };
+        var SERVICE_RES = { notes: "notes-dev", diary: "diary-dev", board: "board-dev", docs: "docs-dev", tasks: "tasks-dev" };
         function applyState(d) {
             // Топ-нав: показ табов по whoami.nav + login-кнопка.
             document.querySelectorAll(".topnav [data-nav]").forEach(function(e){
@@ -473,6 +473,7 @@
             <button class="mobile-tool-btn" data-service="diary" type="button"><span class="icon">📔</span>Дневник</button>
             <button class="mobile-tool-btn" data-service="board" type="button"><span class="icon">🎨</span>Доска</button>
             <button class="mobile-tool-btn" data-service="docs" type="button"><span class="icon">📄</span>Документы</button>
+            <button class="mobile-tool-btn" data-service="tasks" type="button"><span class="icon">📋</span>Задачи</button>
         </div>
     </div>
     <div class="mobile-viewer" id="mobile-viewer" aria-hidden="true">
@@ -485,6 +486,7 @@
         <button class="toolbar-btn" data-service="diary" type="button" title="Дневник">📔</button>
         <button class="toolbar-btn" data-service="board" type="button" title="Доска">🎨</button>
         <button class="toolbar-btn" data-service="docs" type="button" title="Документы">📄</button>
+        <button class="toolbar-btn" data-service="tasks" type="button" title="Задачи">📋</button>
     </div>
 
     <script>
@@ -492,7 +494,8 @@
         notes: { title: "Заметки",   url: "https://notes.dev.raftforge.art/" },
         diary: { title: "Дневник",   url: "https://diary.dev.raftforge.art/" },
         board: { title: "Доска",     url: "https://board.dev.raftforge.art/" },
-        docs:  { title: "Документы", url: "https://docs.dev.raftforge.art/" }
+        docs:  { title: "Документы", url: "https://docs.dev.raftforge.art/" },
+        tasks: { title: "Задачи",    url: "https://tasks.dev.raftforge.art/" }
     };
     </script>
 
