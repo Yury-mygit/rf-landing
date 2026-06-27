@@ -860,6 +860,10 @@
 
     <script>
     // Мобильная ветка: bottom-sheet (тап по handle = toggle) + fullscreen iframe ниже шапки.
+    // Persistence (TT-11): какой сервис сейчас открыт — в localStorage
+    // `tools.mobile.open` (одна строка с serviceId). Mobile Chrome убивает
+    // фоновые вкладки → при возврате DOM ремоунтит дефолтно (viewer закрыт);
+    // bootstrap читает ключ и реоткрывает viewer на нужный сервис.
     (function(){
         if (!window.matchMedia("(max-width: 768px)").matches) return;
 
@@ -870,10 +874,31 @@
         var viewerIframe = document.getElementById("mobile-viewer-iframe");
         var viewerClose = document.getElementById("mobile-viewer-close");
         var navEl = document.querySelector(".topnav");
+        var STORAGE_KEY = "tools.mobile.open";
 
         function navHeight() { return navEl ? navEl.getBoundingClientRect().height : 0; }
 
         function placeViewer() { viewer.style.top = navHeight() + "px"; }
+
+        function openService(serviceId) {
+            var svc = SERVICES[serviceId];
+            if (!svc) return;
+            placeViewer();
+            viewerIframe.src = svc.url;
+            viewer.classList.add("open");
+            viewer.setAttribute("aria-hidden", "false");
+            bottombar.classList.remove("open");
+            document.body.style.overflow = "hidden";
+            try { localStorage.setItem(STORAGE_KEY, serviceId); } catch (e) {}
+        }
+
+        function closeViewer() {
+            viewer.classList.remove("open");
+            viewer.setAttribute("aria-hidden", "true");
+            viewerIframe.src = "about:blank";
+            document.body.style.overflow = "";
+            try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+        }
 
         handle.addEventListener("click", function(e){
             e.stopPropagation();
@@ -889,27 +914,21 @@
         bottombar.querySelectorAll(".mobile-tool-btn").forEach(function(btn){
             btn.addEventListener("click", function(e){
                 e.stopPropagation();
-                var svc = SERVICES[btn.getAttribute("data-service")];
-                if (!svc) return;
-                placeViewer();
-                viewerIframe.src = svc.url;
-                viewer.classList.add("open");
-                viewer.setAttribute("aria-hidden", "false");
-                bottombar.classList.remove("open");
-                document.body.style.overflow = "hidden";
+                openService(btn.getAttribute("data-service"));
             });
         });
 
-        viewerClose.addEventListener("click", function(){
-            viewer.classList.remove("open");
-            viewer.setAttribute("aria-hidden", "true");
-            viewerIframe.src = "about:blank";
-            document.body.style.overflow = "";
-        });
+        viewerClose.addEventListener("click", closeViewer);
 
         window.addEventListener("resize", function(){
             if (viewer.classList.contains("open")) placeViewer();
         });
+
+        // Restore last-opened service после reload (TT-11).
+        try {
+            var last = localStorage.getItem(STORAGE_KEY);
+            if (last && SERVICES[last]) openService(last);
+        } catch (e) {}
     })();
     </script>
 </body>
